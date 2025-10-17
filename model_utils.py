@@ -70,10 +70,10 @@ class FallbackModel:
 # -----------------------------
 scaler, tokenizer, le, model = None, None, None, None
 model_files = {
-    'scaler': './models/scaler-2.joblib',
-    'tokenizer': './models/tokenizer-2.joblib',
-    'labelencoder': './models/labelencoder-2.joblib',
-    'model': './models/model.keras'
+    'scaler': './models/scaler.joblib',
+    'tokenizer': './models/tokenizer.joblib',
+    'labelencoder': './models/label_encoder.joblib',
+    'model': './models/bilstm_model.keras'
 }
 
 print("🔍 Loading REAL models from Google Drive...")
@@ -94,3 +94,12 @@ if all([scaler, tokenizer, le, model]):
 else:
     print("⚠️ Missing components. Using fallback model.")
     model = FallbackModel()
+
+# -----------------------------
+# OpenAI client
+# -----------------------------
+from openai import OpenAI
+import os
+
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key) if api_key else None
