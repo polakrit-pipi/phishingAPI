@@ -56,23 +56,24 @@ class URLRequest(BaseModel):
 # -----------------------------
 @app.post("/analyze")
 def analyze(request: URLRequest):
-    url = request.url.strip()
-    html = fetch_html(url)
-    score, reasons, features, host, scheme = phishing_score(url, html)
+    try:
+        url = request.url.strip()
+        html = fetch_html(url)
+        score, reasons, features, host, scheme = phishing_score(url, html)
 
-    # --- เช็ค PhishTank ---
-    if url in phishtank_cache:
-        reasons.append("URL found in PhishTank database")
+        # --- เช็ค PhishTank ---
+        if url in phishtank_cache:
+            reasons.append("URL found in PhishTank database")
 
-    # --- BiLSTM prediction ---
-    bilstm_label, bilstm_prob_array = predict_url(url)
-    label_idx = int(np.argmax(bilstm_prob_array))
-    bilstm_prob = float(bilstm_prob_array[label_idx])
+        # --- BiLSTM prediction ---
+        bilstm_label, bilstm_prob_array = predict_url(url)
+        label_idx = int(np.argmax(bilstm_prob_array))
+        bilstm_prob = float(bilstm_prob_array[label_idx])
 
-    # --- LLM analysis ---
-    llm_result = None
-    if request.call_llm and client:
-        prompt = f"""
+        # --- LLM analysis ---
+        llm_result = None
+        if request.call_llm and client:
+            prompt = f"""
 Analyze this URL for phishing potential:
 
 URL: {url}
@@ -86,8 +87,8 @@ Triggered Alerts:
 - {"\n- ".join(reasons)}
 
 Technical Features:
-- Digit count: {features.get('digit_count', 0)}
-- URL length: {features.get('url_length', 0)}
+- Digit count: {features.get('digit_count')}
+- URL length: {features.get('url_length')}
 - URL entropy: {features.get('url_entropy', 0):.2f}
 - External links: {len(features.get('hrefs', []))}
 - Images: {len(features.get('imgs', []))}
@@ -102,7 +103,6 @@ Return JSON format:
     "summary": "..."
 }}
 """
-        try:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
@@ -114,27 +114,28 @@ Return JSON format:
             elif raw_text.startswith("```"):
                 raw_text = raw_text[3:-3].strip()
             llm_result = json.loads(raw_text)
-        except Exception as e:
-            llm_result = {
-                "verdict": "Analysis Error",
-                "reason_list": [str(e)],
-                "summary": "Could not complete AI analysis"
-            }
 
-    # --- แปลงค่าเป็น native type ก่อน return ---
-    result = {
-        "url": url,
-        "score": int(score),
-        "reasons": reasons,
-        "features": to_native(features),
-        "bilstm_label": bilstm_label,
-        "bilstm_prob": float(bilstm_prob),
-        "llm_result": llm_result,
-        "host": host,
-        "scheme": scheme,
-    }
+        result = {
+            "url": url,
+            "score": int(score),
+            "reasons": reasons,
+            "features": {k: (int(v) if isinstance(v, (np.integer,)) else float(v) if isinstance(v, (np.floating,)) else v)
+                        for k, v in features.items()},
+            "bilstm_label": bilstm_label,
+            "bilstm_prob": float(bilstm_prob),
+            "llm_result": llm_result,
+            "host": host,
+            "scheme": scheme,
+        }
 
-    return result
+        return result
+
+    except Exception as e:
+        # ✅ เพิ่มบรรทัดนี้เพื่อดูสาเหตุจริงใน log
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
 
 @app.get("/")
 def root():
