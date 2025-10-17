@@ -6,5 +6,5 @@ requests
 tensorflow
 openai
 numpy
-pickle5
+joblib
 scikit-learn
