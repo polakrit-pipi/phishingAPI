@@ -7,6 +7,20 @@ import numpy as np
 import json
 import gzip, csv, io, requests
 
+# -----------------------------
+# Helper: แปลง numpy type เป็น native Python
+# -----------------------------
+def to_native(obj):
+    if isinstance(obj, dict):
+        return {k: to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_native(v) for v in obj]
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating,)):
+        return float(obj)
+    else:
+        return obj
 
 # -----------------------------
 # โหลดฐานข้อมูล PhishTank
@@ -26,21 +40,16 @@ def load_phishtank_database():
         print(f"[WARN] Failed to load PhishTank: {e}")
         return set()
 
-
-# โหลดครั้งเดียวตอนเริ่มแอป
 phishtank_cache = load_phishtank_database()
-
 
 # -----------------------------
 # FastAPI App
 # -----------------------------
 app = FastAPI()
 
-
 class URLRequest(BaseModel):
     url: str
     call_llm: bool = True
-
 
 # -----------------------------
 # วิเคราะห์ URL หลัก
@@ -77,8 +86,8 @@ Triggered Alerts:
 - {"\n- ".join(reasons)}
 
 Technical Features:
-- Digit count: {features.get('digit_count')}
-- URL length: {features.get('url_length')}
+- Digit count: {features.get('digit_count', 0)}
+- URL length: {features.get('url_length', 0)}
 - URL entropy: {features.get('url_entropy', 0):.2f}
 - External links: {len(features.get('hrefs', []))}
 - Images: {len(features.get('imgs', []))}
@@ -112,13 +121,12 @@ Return JSON format:
                 "summary": "Could not complete AI analysis"
             }
 
-    # --- แปลงค่าเป็น type ที่ serialize ได้แน่นอน ---
+    # --- แปลงค่าเป็น native type ก่อน return ---
     result = {
         "url": url,
         "score": int(score),
         "reasons": reasons,
-        "features": {k: (int(v) if isinstance(v, (np.integer,)) else float(v) if isinstance(v, (np.floating,)) else v)
-                     for k, v in features.items()},
+        "features": to_native(features),
         "bilstm_label": bilstm_label,
         "bilstm_prob": float(bilstm_prob),
         "llm_result": llm_result,
@@ -127,7 +135,6 @@ Return JSON format:
     }
 
     return result
-
 
 @app.get("/")
 def root():
