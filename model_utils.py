@@ -70,10 +70,10 @@ class FallbackModel:
 # -----------------------------
 scaler, tokenizer, le, model = None, None, None, None
 model_files = {
-    'scaler': '/content/drive/MyDrive/Project/AJJOKE/project/utils/scaler-2.joblib',
-    'tokenizer': '/content/drive/MyDrive/Project/AJJOKE/project/utils/tokenizer-2.joblib',
-    'labelencoder': '/content/drive/MyDrive/Project/AJJOKE/project/utils/labelencoder-2.joblib',
-    'model': '/content/drive/MyDrive/Project/AJJOKE/project/utils/model.keras'
+    'scaler': './models/scaler-2.joblib',
+    'tokenizer': './models/tokenizer-2.joblib',
+    'labelencoder': './models/labelencoder-2.joblib',
+    'model': './models/model.keras'
 }
 
 print("🔍 Loading REAL models from Google Drive...")
