@@ -7,7 +7,7 @@ from tensorflow.keras.utils import register_keras_serializable
 # -----------------------------
 # Configuration
 # -----------------------------
-maxlen = 200
+maxlen = 50
 
 # -----------------------------
 # Custom Attention Layer
