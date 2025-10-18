@@ -19,6 +19,8 @@ def to_native(obj):
         return int(obj)
     elif isinstance(obj, (np.floating,)):
         return float(obj)
+    elif isinstance(obj, (np.ndarray,)):
+        return obj.tolist()
     else:
         return obj
 
@@ -39,7 +41,6 @@ def load_phishtank_database():
     except Exception as e:
         print(f"[WARN] Failed to load PhishTank: {e}")
         return set()
-
 
 phishtank_cache = load_phishtank_database()
 
@@ -114,29 +115,31 @@ Return JSON format:
                 raw_text = raw_text[7:-3].strip()
             elif raw_text.startswith("```"):
                 raw_text = raw_text[3:-3].strip()
-            llm_result = json.loads(raw_text)
+            try:
+                llm_result = json.loads(raw_text)
+            except json.JSONDecodeError:
+                llm_result = {"verdict": "Parsing Error", "summary": raw_text}
 
+        # --- รวมผลลัพธ์ทั้งหมด ---
         result = {
             "url": url,
             "score": int(score),
             "reasons": reasons,
-            "features": {k: (int(v) if isinstance(v, (np.integer,)) else float(v) if isinstance(v, (np.floating,)) else v)
-                        for k, v in features.items()},
+            "features": to_native(features),
             "bilstm_label": bilstm_label,
-            "bilstm_prob": float(bilstm_prob),
-            "llm_result": llm_result,
+            "bilstm_prob": bilstm_prob,
+            "llm_result": to_native(llm_result),
             "host": host,
             "scheme": scheme,
         }
 
-        return result
+        # ✅ คืนค่าที่ serialize ได้แน่นอน
+        return to_native(result)
 
     except Exception as e:
-        # ✅ เพิ่มบรรทัดนี้เพื่อดูสาเหตุจริงใน log
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
-
 
 @app.get("/")
 def root():
