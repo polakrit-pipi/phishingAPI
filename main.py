@@ -32,13 +32,14 @@ def load_phishtank_database():
         r = requests.get(url, timeout=15)
         r.raise_for_status()
         data = gzip.decompress(r.content)
-        csv_data = csv.DictReader(io.StringIO(data.decode()))
-        urls = {row["url"] for row in csv_data}
+        csv_data = csv.DictReader(io.StringIO(data.decode(errors="ignore")))
+        urls = {row["url"] for row in csv_data if "url" in row}
         print(f"[INFO] Loaded {len(urls)} phishing URLs from PhishTank.")
         return urls
     except Exception as e:
         print(f"[WARN] Failed to load PhishTank: {e}")
         return set()
+
 
 phishtank_cache = load_phishtank_database()
 
